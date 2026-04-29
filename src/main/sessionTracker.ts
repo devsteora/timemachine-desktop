@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
 import { readAgentConfig } from './agentConfig';
+import { getTodayWorkedIdleMinutes } from './dailyActivityTotals';
 
 export interface TimeSegment {
   id: string;
@@ -525,7 +526,9 @@ export interface SessionSnapshot {
   onBreak: boolean;
   headerLabel: string;
   headerElapsedSeconds: number;
+  /** Active + suspicious minutes in the current IST reporting period (6:00 PM–6:00 PM; see dailyActivityTotals). */
   workedMinutes: number;
+  /** Idle minutes in that same period from minute logs. */
   idleMinutes: number;
   segments: TimeSegment[];
   startedAtFormatted: string | null;
@@ -546,12 +549,12 @@ export function getSessionSnapshot(): SessionSnapshot {
   const now = Date.now();
 
   let workingSeconds = 0;
-  let idleSeconds = 0;
   for (const seg of segments) {
     const dur = segmentSeconds(seg, now);
     if (isWorkingActivity(seg.activity)) workingSeconds += dur;
-    else idleSeconds += dur;
   }
+
+  const todayTotals = getTodayWorkedIdleMinutes();
 
   let headerLabel = 'Working';
   if (isPaused) headerLabel = 'Paused';
@@ -575,8 +578,8 @@ export function getSessionSnapshot(): SessionSnapshot {
     onBreak,
     headerLabel,
     headerElapsedSeconds: Math.floor(workingSeconds),
-    workedMinutes: Math.floor(workingSeconds / 60),
-    idleMinutes: Math.floor(idleSeconds / 60),
+    workedMinutes: todayTotals.workedMinutes,
+    idleMinutes: todayTotals.idleMinutes,
     segments: segments.map((s) => ({ ...s })),
     startedAtFormatted: startedStr,
     idleStreakWallClockActive: idleStreakWallClockMs != null,

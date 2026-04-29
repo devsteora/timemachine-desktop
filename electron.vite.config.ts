@@ -29,7 +29,11 @@ export default defineConfig({
     //   Linux/Mac: export ENTERPRISE_API_URL=https://apitm.steorasystems.com
     define: {
       'process.env.ENTERPRISE_API_URL': JSON.stringify(
-        process.env.ENTERPRISE_API_URL || 'http://127.0.0.1:8000'
+        process.env.ENTERPRISE_API_URL || 'http://apitm.steorasystems.com'
+      ),
+      'process.env.ENTERPRISE_UPDATE_FEED_URL': JSON.stringify(
+        process.env.ENTERPRISE_UPDATE_FEED_URL ||
+          'https://lms-app-storage-steora.s3.ap-south-1.amazonaws.com/desktop-releases'
       ),
     },
   },

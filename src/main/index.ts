@@ -7,7 +7,7 @@ import axios from 'axios';
 import { initDB } from './database';
 import { startTracking, evaluateActivityMinute } from './activityTracker';
 import { enqueueActivity } from './queueService';
-import { syncQueueToServer, getLastSuccessfulSyncAt } from './syncWorker';
+import { syncQueueToServer, getLastSuccessfulSyncAt, getPendingActivityQueueCount, getLastSyncError } from './syncWorker';
 import { readAgentConfig, writeAgentConfig } from './agentConfig';
 import { normalizeApiBaseUrl } from './urlUtils';
 import {
@@ -125,6 +125,93 @@ function tickIdleWallClockFlow(): void {
 /** Allows `before-quit` to proceed (updates / installer). */
 let allowQuit = false;
 
+/** Broadcast auto-update state to renderer (More tab / diagnostics). */
+function broadcastUpdateStatus(payload: {
+  status:
+    | 'checking'
+    | 'available'
+    | 'not-available'
+    | 'downloaded'
+    | 'error'
+    | 'idle';
+  message?: string;
+  version?: string;
+}): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('update-status', payload);
+  }
+}
+
+function setupAutoUpdater(): void {
+  if (!app.isPackaged) {
+    console.info('[autoUpdater] skipped in development (unpackaged build)');
+    return;
+  }
+
+  const feedUrl = process.env.ENTERPRISE_UPDATE_FEED_URL?.trim();
+  if (feedUrl) {
+    autoUpdater.setFeedURL({
+      provider: 'generic',
+      url: feedUrl.replace(/\/$/, ''),
+    });
+    console.info('[autoUpdater] feed URL:', feedUrl);
+  }
+
+  autoUpdater.logger = console;
+  autoUpdater.on('error', (err) => {
+    console.error('[autoUpdater] error:', err);
+    broadcastUpdateStatus({
+      status: 'error',
+      message: err.message,
+    });
+  });
+  autoUpdater.on('checking-for-update', () => {
+    console.info('[autoUpdater] checking for update…');
+    broadcastUpdateStatus({ status: 'checking' });
+  });
+  autoUpdater.on('update-available', (info) => {
+    console.info('[autoUpdater] update available:', info.version);
+    broadcastUpdateStatus({
+      status: 'available',
+      version: info.version,
+    });
+  });
+  autoUpdater.on('update-not-available', () => {
+    console.info('[autoUpdater] no newer update (current %s)', app.getVersion());
+    broadcastUpdateStatus({ status: 'not-available', version: app.getVersion() });
+  });
+  autoUpdater.on('download-progress', (p) => {
+    console.info(
+      `[autoUpdater] download ${Math.round(p.percent)}% (${p.bytesPerSecond} B/s)`
+    );
+  });
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.on('update-downloaded', (info) => {
+    console.info('[autoUpdater] update downloaded:', info.version);
+    broadcastUpdateStatus({
+      status: 'downloaded',
+      version: info.version,
+    });
+    allowQuit = true;
+    setTimeout(() => {
+      autoUpdater.quitAndInstall(true, true);
+    }, 15000);
+  });
+
+  const runCheck = () => {
+    autoUpdater.checkForUpdates().catch((err: unknown) => {
+      console.error('[autoUpdater] checkForUpdates failed:', err);
+      broadcastUpdateStatus({
+        status: 'error',
+        message: err instanceof Error ? err.message : String(err),
+      });
+    });
+  };
+  runCheck();
+  setInterval(runCheck, 6 * 60 * 60 * 1000);
+}
+
 /** In packaged builds the agent must stay running; dev builds can exit normally. */
 function productionAgentLockdown(): boolean {
   return !is.dev;
@@ -194,7 +281,9 @@ function createTray(): void {
   if (!productionAgentLockdown() || tray) return;
 
   tray = new Tray(trayIconImage());
-  tray.setToolTip('Enterprise Agent — monitoring active');
+  tray.setToolTip(
+    'Enterprise Agent — runs in background. Find EnterpriseAgent.exe under Task Manager → Processes.'
+  );
   const menu = Menu.buildFromTemplate([
     {
       label: 'Show window',
@@ -204,6 +293,11 @@ function createTray(): void {
           mainWindow.focus();
         }
       },
+    },
+    { type: 'separator' },
+    {
+      label: 'Task Manager: look for EnterpriseAgent.exe',
+      enabled: false,
     },
   ]);
   tray.setContextMenu(menu);
@@ -248,11 +342,11 @@ function createWindow(): void {
   }
 
   mainWindow.on('ready-to-show', () => {
-    // Don't show the window when launched via startup registry key or login item.
-    // The agent runs silently in the system tray until the user clicks it.
+    const pref = readAgentConfig().showWindowOnStartup === true;
+    const argvHidden = process.argv.includes('--hidden');
+    const loginHidden = app.getLoginItemSettings().wasOpenedAsHidden;
     const startHidden =
-      process.argv.includes('--hidden') ||
-      app.getLoginItemSettings().wasOpenedAsHidden;
+      (argvHidden || loginHidden) && !pref;
     if (startHidden && productionAgentLockdown()) {
       createTray();
       return;
@@ -323,24 +417,8 @@ if (!gotSingleInstanceLock) {
       reconcileSleepGap(Date.now());
     });
 
-    // Silent auto-update: download without prompting; install after handles are released.
-    // Immediate quitAndInstall races NSIS and often causes "Failed to uninstall old application files".
-    autoUpdater.logger = console;
-    autoUpdater.on('error', (err) => {
-      console.error('[autoUpdater] error:', err);
-    });
-    autoUpdater.autoDownload = true;
-    autoUpdater.autoInstallOnAppQuit = true;
-    autoUpdater.on('update-downloaded', () => {
-      allowQuit = true;
-      // Let the main process exit cleanly and release DLL locks before NSIS replaces files.
-      setTimeout(() => {
-        autoUpdater.quitAndInstall(true, true);
-      }, 15000);
-    });
-    autoUpdater.checkForUpdates().catch((err: unknown) => {
-      console.error('[autoUpdater] checkForUpdates failed:', err);
-    });
+    // Silent auto-update (feed URL + periodic check): see setupAutoUpdater.
+    setupAutoUpdater();
 
     initDB();
 
@@ -530,13 +608,20 @@ ipcMain.handle('get-session-state', async () => getSessionSnapshot());
 ipcMain.handle('get-sync-status', async () => ({
   lastSyncAt: getLastSuccessfulSyncAt(),
   syncIntervalMs: 120_000,
+  pendingQueueCount: getPendingActivityQueueCount(),
+  lastSyncError: getLastSyncError(),
+  appVersion: app.getVersion(),
 }));
 
 ipcMain.handle(
   'save-preferences',
   async (
     _,
-    prefs: { autoTracking?: boolean; breakReminderMinutes?: number }
+    prefs: {
+      autoTracking?: boolean;
+      breakReminderMinutes?: number;
+      showWindowOnStartup?: boolean;
+    }
   ) => {
     writeAgentConfig(prefs);
     return { ok: true as const };
@@ -548,6 +633,7 @@ ipcMain.handle('get-preferences', async () => {
   return {
     autoTracking: c.autoTracking !== false,
     breakReminderMinutes: c.breakReminderMinutes ?? 15,
+    showWindowOnStartup: c.showWindowOnStartup === true,
   };
 });
 

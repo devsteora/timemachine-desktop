@@ -18,6 +18,12 @@ export function initDB() {
       mouse_entropy REAL NOT NULL,
       active_app TEXT,
       timestamp TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS daily_activity_totals (
+      date TEXT PRIMARY KEY,
+      worked_minutes INTEGER NOT NULL DEFAULT 0,
+      idle_minutes INTEGER NOT NULL DEFAULT 0
     )
   `);
   console.log(`Local SQLite database initialized at ${dbPath}`);

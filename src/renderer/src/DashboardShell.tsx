@@ -208,9 +208,13 @@ export default function DashboardShell({
   const [session, setSession] = useState<SessionSnapshotDTO | null>(null);
   const [nowTick, setNowTick] = useState(Date.now());
   const [lastSyncAt, setLastSyncAt] = useState<number | null>(null);
+  const [pendingQueueCount, setPendingQueueCount] = useState(0);
+  const [lastSyncError, setLastSyncError] = useState<string | null>(null);
+  const [updateStatusLine, setUpdateStatusLine] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [autoTracking, setAutoTracking] = useState(true);
   const [breakReminder, setBreakReminder] = useState(15);
+  const [showWindowOnStartup, setShowWindowOnStartup] = useState(false);
   const [appVersion, setAppVersion] = useState('');
   const [breakFlow, setBreakFlow] = useState(false);
   const [breakReason, setBreakReason] = useState('');
@@ -324,6 +328,8 @@ export default function DashboardShell({
   const refreshSync = useCallback(async () => {
     const s = await window.api.getSyncStatus();
     setLastSyncAt(s.lastSyncAt);
+    setPendingQueueCount(s.pendingQueueCount);
+    setLastSyncError(s.lastSyncError);
   }, []);
 
   useEffect(() => {
@@ -334,6 +340,7 @@ export default function DashboardShell({
       const prefs = await window.api.getPreferences();
       setAutoTracking(prefs.autoTracking);
       setBreakReminder(prefs.breakReminderMinutes);
+      setShowWindowOnStartup(prefs.showWindowOnStartup);
       const meta = await window.api.getAppMeta();
       setAppVersion(meta.version);
     })();
@@ -382,6 +389,40 @@ export default function DashboardShell({
       setIdleWarn(null);
     }
   }, [session?.idleStreakWallClockActive, idleWarn, session]);
+
+  useEffect(() => {
+    const id = setInterval(() => void refreshSync(), 15_000);
+    return () => clearInterval(id);
+  }, [refreshSync]);
+
+  useEffect(() => {
+    const off = window.api.onUpdateStatus((p) => {
+      switch (p.status) {
+        case 'checking':
+          setUpdateStatusLine('Checking for updates…');
+          break;
+        case 'available':
+          setUpdateStatusLine(
+            `Update available${p.version ? `: v${p.version}` : ''} (downloading)`
+          );
+          break;
+        case 'not-available':
+          setUpdateStatusLine(`Up to date (v${p.version ?? '?'})`);
+          break;
+        case 'downloaded':
+          setUpdateStatusLine(
+            `Update v${p.version ?? '?'} downloaded — installing after restart`
+          );
+          break;
+        case 'error':
+          setUpdateStatusLine(`Update check failed: ${p.message ?? 'error'}`);
+          break;
+        default:
+          setUpdateStatusLine(null);
+      }
+    });
+    return () => off();
+  }, []);
 
   useEffect(() => {
     const id = setInterval(() => setNowTick(Date.now()), 1000);
@@ -441,6 +482,11 @@ export default function DashboardShell({
     await window.api.savePreferences({ breakReminderMinutes: v });
   };
 
+  const handleToggleShowWindowOnStartup = async (next: boolean) => {
+    setShowWindowOnStartup(next);
+    await window.api.savePreferences({ showWindowOnStartup: next });
+  };
+
   const headerTitle = session?.headerLabel ?? 'Working';
   const headerClock = formatHMS(session?.headerElapsedSeconds ?? 0);
 
@@ -453,8 +499,13 @@ export default function DashboardShell({
 
   const syncLabel =
     lastSyncAt != null
-      ? `Synced @ ${new Date(lastSyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Syncs every 2 minutes.`
-      : 'Not synced yet. Syncs every 2 minutes.';
+      ? `Last sync to server @ ${new Date(lastSyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${pendingQueueCount} sample(s) queued`
+      : pendingQueueCount > 0
+        ? `Not synced yet · ${pendingQueueCount} sample(s) queued`
+        : 'Not synced yet.';
+  const syncErrorLabel = lastSyncError
+    ? `Last sync error: ${lastSyncError}`
+    : null;
 
   const idleWarnSecondsLeft = idleWarn
     ? Math.max(0, Math.ceil((idleWarn.deadlineMs - nowTick) / 1000))
@@ -645,6 +696,9 @@ export default function DashboardShell({
                   <span className="font-semibold tabular-nums text-ea-deep">
                     {formatMinutesAsHoursMinutes(session?.idleMinutes ?? 0)}
                   </span>
+                </p>
+                <p className="text-[10px] leading-snug text-ea-muted">
+                  Worked and Idle reset when the reporting day starts at 6:00 PM IST (Asia/Kolkata).
                 </p>
                 <p className="text-ea-muted">
                   Started at {session?.startedAtFormatted ?? '—'}
@@ -873,10 +927,48 @@ export default function DashboardShell({
 
         {tab === 'more' && (
           <div className="space-y-5 text-sm">
+            <div className="rounded-lg border border-ea-soft bg-ea-soft/40 px-3 py-2.5 text-[11px] leading-snug text-ea-primaryDark">
+              <p className="font-semibold text-ea-deep">Background agent</p>
+              <p className="mt-1">
+                When Windows starts, the app may run with no window (system tray). In{' '}
+                <strong>Task Manager → Processes</strong>, look for{' '}
+                <strong>EnterpriseAgent.exe</strong>. Click the tray icon to open this window.
+              </p>
+              {updateStatusLine ? (
+                <p className="mt-2 font-medium text-ea-deep">Updates: {updateStatusLine}</p>
+              ) : null}
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-b border-ea-soft pb-4">
+              <span className="text-ea-primaryDark">
+                Show window when Windows starts (ignore hidden startup)
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={showWindowOnStartup}
+                onClick={() =>
+                  void handleToggleShowWindowOnStartup(!showWindowOnStartup)
+                }
+                className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+                  showWindowOnStartup ? 'bg-ea-primary' : 'bg-ea-muted/40'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform duration-200 ease-out ${
+                    showWindowOnStartup ? 'left-6' : 'left-0.5'
+                  }`}
+                />
+              </button>
+            </div>
+
             <div className="flex gap-3 border-b border-ea-soft pb-4">
               <span className="text-2xl text-ea-primary">⟳</span>
               <div>
                 <p className="text-ea-deep">{syncLabel}</p>
+                {syncErrorLabel ? (
+                  <p className="mt-1 text-[11px] text-red-600">{syncErrorLabel}</p>
+                ) : null}
                 <button
                   type="button"
                   className="mt-1 font-medium text-ea-primary transition-colors hover:text-ea-primaryDark hover:underline"

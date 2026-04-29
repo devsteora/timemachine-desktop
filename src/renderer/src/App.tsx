@@ -39,14 +39,19 @@ declare global {
       getSyncStatus: () => Promise<{
         lastSyncAt: number | null;
         syncIntervalMs: number;
+        pendingQueueCount: number;
+        lastSyncError: string | null;
+        appVersion: string;
       }>;
       getPreferences: () => Promise<{
         autoTracking: boolean;
         breakReminderMinutes: number;
+        showWindowOnStartup: boolean;
       }>;
       savePreferences: (prefs: {
         autoTracking?: boolean;
         breakReminderMinutes?: number;
+        showWindowOnStartup?: boolean;
       }) => Promise<{ ok: boolean }>;
       openDashboard: (url: string) => Promise<void>;
       getAppMeta: () => Promise<{ version: string; name: string }>;
@@ -94,6 +99,13 @@ declare global {
         callback: (payload: { startedAt: number; now: number }) => void
       ) => () => void;
       onIdleResolutionDismissed: (callback: () => void) => () => void;
+      onUpdateStatus: (
+        callback: (payload: {
+          status: string;
+          message?: string;
+          version?: string;
+        }) => void
+      ) => () => void;
     };
   }
 }
@@ -102,7 +114,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [apiBaseUrl, setApiBaseUrl] = useState('http://127.0.0.1:8000');
+  const [apiBaseUrl, setApiBaseUrl] = useState('http://apitm.steorasystems.com');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -227,7 +239,7 @@ export default function App() {
               value={apiBaseUrl}
               onChange={(e) => setApiBaseUrl(e.target.value)}
               className="w-full rounded-lg border border-ea-muted/50 bg-ea-deep/50 px-3 py-2 text-sm text-white outline-none ring-ea-primary/30 transition-shadow duration-200 placeholder:text-ea-muted/80 focus:border-ea-primary focus:ring-2"
-              placeholder="http://127.0.0.1:8000"
+              placeholder="http://apitm.steorasystems.com"
             />
           </div>
           <div>

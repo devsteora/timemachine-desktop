@@ -12,6 +12,8 @@ export interface AgentConfig {
   autoTracking?: boolean;
   /** Minutes — reminder to resume after break (UI only until notifications wired). */
   breakReminderMinutes?: number;
+  /** When true, show main window on launch even if started with --hidden (HKLM Run). */
+  showWindowOnStartup?: boolean;
 }
 
 function configPath(): string {
@@ -31,7 +33,7 @@ export function readAgentConfig(): AgentConfig {
   }
 
   const rawUrl =
-    envUrl || fromFile.apiBaseUrl || 'http://127.0.0.1:8000';
+    envUrl || fromFile.apiBaseUrl || 'http://apitm.steorasystems.com';
 
   return {
     apiBaseUrl: normalizeApiBaseUrl(rawUrl),
@@ -44,6 +46,10 @@ export function readAgentConfig(): AgentConfig {
       typeof fromFile.breakReminderMinutes === 'number'
         ? fromFile.breakReminderMinutes
         : 15,
+    showWindowOnStartup:
+      typeof fromFile.showWindowOnStartup === 'boolean'
+        ? fromFile.showWindowOnStartup
+        : false,
   };
 }
 
@@ -61,6 +67,10 @@ export function writeAgentConfig(patch: Partial<AgentConfig>): AgentConfig {
       patch.breakReminderMinutes !== undefined
         ? patch.breakReminderMinutes
         : cur.breakReminderMinutes,
+    showWindowOnStartup:
+      patch.showWindowOnStartup !== undefined
+        ? patch.showWindowOnStartup
+        : cur.showWindowOnStartup,
   };
 
   fs.writeFileSync(
@@ -73,6 +83,7 @@ export function writeAgentConfig(patch: Partial<AgentConfig>): AgentConfig {
         userId: next.userId,
         autoTracking: next.autoTracking,
         breakReminderMinutes: next.breakReminderMinutes,
+        showWindowOnStartup: next.showWindowOnStartup,
       },
       null,
       2

@@ -51,15 +51,20 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('get-sync-status') as Promise<{
       lastSyncAt: number | null;
       syncIntervalMs: number;
+      pendingQueueCount: number;
+      lastSyncError: string | null;
+      appVersion: string;
     }>,
   getPreferences: () =>
     ipcRenderer.invoke('get-preferences') as Promise<{
       autoTracking: boolean;
       breakReminderMinutes: number;
+      showWindowOnStartup: boolean;
     }>,
   savePreferences: (prefs: {
     autoTracking?: boolean;
     breakReminderMinutes?: number;
+    showWindowOnStartup?: boolean;
   }) => ipcRenderer.invoke('save-preferences', prefs),
   openDashboard: (url: string) => ipcRenderer.invoke('open-dashboard', url),
   getAppMeta: () =>
@@ -141,5 +146,19 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('idle-resolution-dismissed', handler);
     return () =>
       ipcRenderer.removeListener('idle-resolution-dismissed', handler);
+  },
+  onUpdateStatus: (
+    callback: (payload: {
+      status: string;
+      message?: string;
+      version?: string;
+    }) => void
+  ) => {
+    const handler = (
+      _event: unknown,
+      payload: { status: string; message?: string; version?: string }
+    ) => callback(payload);
+    ipcRenderer.on('update-status', handler);
+    return () => ipcRenderer.removeListener('update-status', handler);
   },
 });
