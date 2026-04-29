@@ -1,0 +1,56 @@
+appId: com.enterprise.timetracker
+productName: Enterprise Agent
+directories:
+  buildResources: build
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+asarUnpack:
+  - resources/**
+win:
+  executableName: EnterpriseAgent
+  # Sign the installer with your code-signing certificate.
+  # Set CSC_LINK and CSC_KEY_PASSWORD env vars in CI for signing.
+  signingHashAlgorithms:
+    - sha256
+nsis:
+  artifactName: EnterpriseAgentSetup-${version}.exe
+  shortcutName: Enterprise Agent
+  uninstallDisplayName: Enterprise Agent
+  createDesktopShortcut: false
+  createStartMenuShortcut: false
+  # Run the app immediately after install so the agent is active right away
+  runAfterFinish: true
+  # Custom NSIS script: writes the HKLM Run key for machine-wide startup enforcement
+  include: build/installer.nsh
+mac:
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    - NSCameraUsageDescription: Application requests access to the device's camera.
+    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
+    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
+    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  notarize: false
+dmg:
+  artifactName: EnterpriseAgent-${version}.${ext}
+linux:
+  target:
+    - AppImage
+    - deb
+  maintainer: enterprise@yourdomain.com
+  category: Utility
+appImage:
+  artifactName: EnterpriseAgent-${version}.${ext}
+npmRebuild: false
+publish:
+  provider: s3
+  bucket: enterprise-time-tracker-updates
+  region: us-east-1
+  path: /releases
+  # ACL is set to private; served via CloudFront or presigned URLs if needed.
+  # For public bucket (simpler): add acl: public-read
+  acl: public-read
