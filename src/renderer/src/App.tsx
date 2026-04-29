@@ -107,6 +107,8 @@ export default function App() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginSubmitting, setLoginSubmitting] = useState(false);
   const [agentLockedDown, setAgentLockedDown] = useState(false);
+  /** Shown on the main shell when sign-out fails (e.g. disk error). */
+  const [signOutError, setSignOutError] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -132,10 +134,11 @@ export default function App() {
         email: loginEmail.trim(),
         password: loginPassword,
       });
-      if (!result.ok) {
+      if (result.ok === false) {
         setLoginError(result.error);
         return;
       }
+      setSignOutError(null);
       setIsAuthenticated(true);
       setUserEmail(result.user.email);
       setLoginPassword('');
@@ -149,10 +152,17 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    setSignOutError(null);
+    const emailForForm = userEmail;
     const result = await window.api.authLogout();
-    if (!result.ok) return;
+    if (result.ok === false) {
+      setSignOutError(result.error);
+      return;
+    }
+    setLoginError(null);
     setIsAuthenticated(false);
     setUserEmail(null);
+    if (emailForForm) setLoginEmail(emailForForm);
   };
 
   if (!authReady) {
@@ -264,6 +274,8 @@ export default function App() {
         apiBaseUrl={apiBaseUrl}
         agentLockedDown={agentLockedDown}
         onLogout={handleLogout}
+        signOutError={signOutError}
+        onDismissSignOutError={() => setSignOutError(null)}
       />
     </div>
   );

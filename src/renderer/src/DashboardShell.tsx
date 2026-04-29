@@ -181,6 +181,8 @@ interface Props {
   apiBaseUrl: string;
   agentLockedDown: boolean;
   onLogout: () => void;
+  signOutError?: string | null;
+  onDismissSignOutError?: () => void;
 }
 
 export default function DashboardShell({
@@ -188,6 +190,8 @@ export default function DashboardShell({
   apiBaseUrl,
   agentLockedDown,
   onLogout,
+  signOutError,
+  onDismissSignOutError,
 }: Props) {
   const [tab, setTab] = useState<Tab>('home');
   const [session, setSession] = useState<SessionSnapshotDTO | null>(null);
@@ -514,6 +518,23 @@ export default function DashboardShell({
       </div>
 
       <div className="no-drag min-h-0 flex-1 overflow-y-auto px-3 pb-2 pt-4">
+        {signOutError ? (
+          <div
+            role="alert"
+            className="mb-3 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs text-red-800"
+          >
+            <span className="min-w-0 flex-1">{signOutError}</span>
+            {onDismissSignOutError ? (
+              <button
+                type="button"
+                className="shrink-0 font-medium text-red-700 underline"
+                onClick={() => onDismissSignOutError()}
+              >
+                Dismiss
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         {breakFlow ? (
           <div className="space-y-5 pb-2">
             <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
@@ -849,25 +870,23 @@ export default function DashboardShell({
               </div>
             </div>
 
+            <button
+              type="button"
+              className="flex w-full items-center gap-3 border-b border-gray-100 pb-4 text-left text-gray-800 hover:bg-gray-50"
+              onClick={onLogout}
+            >
+              <span className="text-xl">⎋</span>
+              Sign out
+            </button>
             {!agentLockedDown && (
-              <>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-3 border-b border-gray-100 pb-4 text-left text-gray-800 hover:bg-gray-50"
-                  onClick={onLogout}
-                >
-                  <span className="text-xl">⎋</span>
-                  Logout
-                </button>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-3 border-b border-gray-100 pb-4 text-left text-gray-800 hover:bg-gray-50"
-                  onClick={() => window.close()}
-                >
-                  <span className="text-xl">🚪</span>
-                  Exit
-                </button>
-              </>
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 border-b border-gray-100 pb-4 text-left text-gray-800 hover:bg-gray-50"
+                onClick={() => window.close()}
+              >
+                <span className="text-xl">🚪</span>
+                Exit
+              </button>
             )}
 
             <div className="flex items-center justify-between gap-3 border-b border-gray-100 pb-4">

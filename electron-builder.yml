@@ -48,9 +48,7 @@ appImage:
 npmRebuild: false
 publish:
   provider: s3
-  bucket: enterprise-time-tracker-updates
-  region: us-east-1
-  path: /releases
-  # ACL is set to private; served via CloudFront or presigned URLs if needed.
-  # For public bucket (simpler): add acl: public-read
+  bucket: lms-app-storage-steora
+  region: ap-south-1
+  path: /desktop-releases
   acl: public-read

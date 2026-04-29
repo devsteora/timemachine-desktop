@@ -444,12 +444,6 @@ ipcMain.handle(
 );
 
 ipcMain.handle('auth-logout', async () => {
-  if (productionAgentLockdown()) {
-    return {
-      ok: false as const,
-      error: 'Signing out is disabled for this deployment.',
-    };
-  }
   writeAgentConfig({
     accessToken: null,
     userEmail: null,
