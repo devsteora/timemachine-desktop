@@ -1,0 +1,80 @@
+name: Release Desktop Agent
+
+# Triggered by a version tag push: git tag v1.2.3 && git push --tags
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  AWS_REGION: ap-south-1
+  S3_UPDATE_BUCKET: lms-app-storage-steora
+
+jobs:
+  build-windows:
+    name: Build Windows Installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install dependencies
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build and package (Windows NSIS installer)
+        working-directory: desktop
+        env:
+          # Code-signing certificate (optional but recommended for enterprise):
+          # CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          # CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+
+          # electron-builder reads publish config from electron-builder.yml.
+          # AWS credentials are injected below for the S3 upload.
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+          # Bake the production API URL into the packaged app at build time.
+          ENTERPRISE_API_URL: ${{ secrets.ENTERPRISE_API_URL }}
+        run: npm run build:win -- --publish always
+
+      # The installer and latest.yml are uploaded to S3 by electron-builder
+      # (publish always). The step below also uploads them explicitly so CI
+      # artifacts are visible in the GitHub Actions summary.
+      - name: Upload installer artifact to GitHub Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: EnterpriseAgentSetup-${{ github.ref_name }}
+          path: |
+            desktop/dist/EnterpriseAgentSetup-*.exe
+            desktop/dist/latest.yml
+
+  # macOS build (optional — only needed if you distribute to macOS employees)
+  build-macos:
+    name: Build macOS DMG
+    runs-on: macos-latest
+    if: false   # Set to true when macOS distribution is required
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+        working-directory: desktop
+      - run: npm run build:mac -- --publish always
+        working-directory: desktop
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ env.AWS_REGION }}
