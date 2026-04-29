@@ -285,14 +285,16 @@ if (!gotSingleInstanceLock) {
       reconcileSleepGap(Date.now());
     });
 
-    // Silent forced auto-update: download and install without prompting employees.
+    // Silent auto-update: download without prompting; install after handles are released.
+    // Immediate quitAndInstall races NSIS and often causes "Failed to uninstall old application files".
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.on('update-downloaded', () => {
-      // Allow the before-quit handler to pass so the installer can run.
       allowQuit = true;
-      // isSilent=true, isForceRunAfter=true: restart the app after installing.
-      autoUpdater.quitAndInstall(true, true);
+      // Let the main process exit cleanly and release DLL locks before NSIS replaces files.
+      setTimeout(() => {
+        autoUpdater.quitAndInstall(true, true);
+      }, 8000);
     });
     autoUpdater.checkForUpdates().catch(() => {
       // Silently ignore update check failures (offline, no update server yet).
