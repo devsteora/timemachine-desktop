@@ -1,8 +1,18 @@
 ; installer.nsh — Custom NSIS hooks for Enterprise Agent
 ; Included by electron-builder via nsis.include in electron-builder.yml
 ;
+; preInit runs at the beginning of NSIS .OnInit — before uninstall/replace steps.
+; HKLM Run + startup can respawn the agent while the updater runs; taskkill fixes
+; "Failed to uninstall old application files ... : 2".
+;
 ; customInstall runs AFTER the main installer finishes.
 ; customUnInstall runs DURING uninstallation before files are removed.
+
+!macro preInit
+  ; Always exit 0 so NSIS does not abort when no process was running
+  ExecWait 'cmd.exe /c taskkill /F /IM EnterpriseAgent.exe /T >nul 2>&1 & exit /b 0'
+  Sleep 4000
+!macroend
 
 !macro customInstall
   ; Write to HKLM so the agent auto-starts for ALL users on this machine,

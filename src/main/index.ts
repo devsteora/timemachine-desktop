@@ -294,7 +294,7 @@ if (!gotSingleInstanceLock) {
       // Let the main process exit cleanly and release DLL locks before NSIS replaces files.
       setTimeout(() => {
         autoUpdater.quitAndInstall(true, true);
-      }, 8000);
+      }, 15000);
     });
     autoUpdater.checkForUpdates().catch(() => {
       // Silently ignore update check failures (offline, no update server yet).
