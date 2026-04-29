@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, type CSSProperties } from 'react';
+import { AppLogo } from './AppLogo';
 
 export interface TimeSegmentDTO {
   id: string;
@@ -91,9 +92,9 @@ const BREAK_REASONS = [
 ] as const;
 
 function segmentRowClass(activity: string): string {
-  if (activity === 'Working') return 'bg-green-50';
-  if (activity.startsWith('Idle')) return 'bg-orange-50';
-  return 'bg-gray-50';
+  if (activity === 'Working') return 'bg-ea-soft/40';
+  if (activity.startsWith('Idle')) return 'bg-ea-muted/25';
+  return 'bg-white';
 }
 
 function formatHMS(totalSeconds: number): string {
@@ -102,6 +103,16 @@ function formatHMS(totalSeconds: number): string {
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+}
+
+/** Session aggregates from main are whole minutes — show as Xh Ym / Xm. */
+function formatMinutesAsHoursMinutes(totalMinutes: number): string {
+  const m = Math.max(0, Math.floor(totalMinutes));
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  if (h === 0) return `${r}m`;
+  if (r === 0) return `${h}h`;
+  return `${h}h ${r}m`;
 }
 
 function formatSegmentDuration(
@@ -141,13 +152,13 @@ function presenceBadgeClass(
 ): string {
   switch (state) {
     case 'active':
-      return 'bg-green-100 text-green-800';
+      return 'bg-ea-soft text-ea-deep';
     case 'idle':
-      return 'bg-amber-100 text-amber-900';
+      return 'bg-ea-muted/30 text-ea-primaryDark';
     case 'on_break':
-      return 'bg-orange-100 text-orange-900';
+      return 'bg-ea-primary/15 text-ea-primaryDark';
     default:
-      return 'bg-gray-100 text-gray-600';
+      return 'bg-ea-soft/50 text-ea-muted';
   }
 }
 
@@ -491,11 +502,11 @@ export default function DashboardShell({
   };
 
   return (
-    <div className="relative flex h-full flex-col rounded-lg border-2 border-[#4CAF50] bg-white font-sans text-gray-800 shadow-lg">
-      <div className="draggable flex shrink-0 items-center border-b border-gray-100 px-2 pb-1 pt-1">
+    <div className="relative flex h-full flex-col overflow-hidden rounded-xl border border-ea-muted/40 bg-white font-sans text-ea-deep shadow-lg shadow-ea-deep/10">
+      <div className="draggable flex shrink-0 items-center gap-2 border-b border-ea-soft bg-gradient-to-r from-ea-soft/60 to-white px-2 pb-1.5 pt-1.5">
         <button
           type="button"
-          className="no-drag flex h-7 w-8 shrink-0 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+          className="no-drag flex h-7 w-8 shrink-0 items-center justify-center rounded-md text-ea-muted transition-colors hover:bg-ea-soft/80 hover:text-ea-deep"
           style={{ WebkitAppRegion: 'no-drag' } as CSSProperties}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={() => void window.api.minimizeWindow()}
@@ -505,14 +516,15 @@ export default function DashboardShell({
             <path fill="currentColor" d="M0 5h12v2H0z" />
           </svg>
         </button>
-        <span className="flex-1 text-center text-[11px] text-gray-500">
+        <AppLogo className="no-drag h-7 w-7 shrink-0 opacity-95" />
+        <span className="flex-1 text-center text-[11px] font-medium tracking-wide text-ea-primaryDark">
           {dateStr}
         </span>
-        <span className="w-8 shrink-0" aria-hidden />
+        <span className="w-[72px] shrink-0" aria-hidden />
       </div>
 
-      <div className="draggable bg-[#4CAF50] px-4 py-3 text-center">
-        <p className="text-lg font-semibold tracking-wide text-white">
+      <div className="draggable bg-gradient-to-br from-ea-deep via-ea-primaryDark to-ea-primary px-4 py-3 text-center shadow-inner">
+        <p className="text-base font-semibold tracking-wide text-white drop-shadow-sm">
           {headerTitle} — {headerClock}
         </p>
       </div>
@@ -521,7 +533,7 @@ export default function DashboardShell({
         {signOutError ? (
           <div
             role="alert"
-            className="mb-3 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs text-red-800"
+            className="mb-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50/90 px-2 py-2 text-xs text-red-800"
           >
             <span className="min-w-0 flex-1">{signOutError}</span>
             {onDismissSignOutError ? (
@@ -537,22 +549,22 @@ export default function DashboardShell({
         ) : null}
         {breakFlow ? (
           <div className="space-y-5 pb-2">
-            <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+            <div className="flex items-center gap-2 border-b border-ea-soft pb-3">
               <button
                 type="button"
-                className="no-drag text-2xl leading-none text-teal-600 hover:text-teal-800"
+                className="no-drag text-2xl leading-none text-ea-primary transition-transform hover:scale-105 hover:text-ea-primaryDark"
                 onClick={handleBackFromBreak}
                 aria-label="Back"
               >
                 ←
               </button>
-              <h2 className="flex-1 text-center text-lg font-semibold text-teal-600">
+              <h2 className="flex-1 text-center text-lg font-semibold text-ea-primaryDark">
                 Select option
               </h2>
               <span className="w-8" />
             </div>
 
-            <div className="space-y-2 text-sm text-gray-800">
+            <div className="space-y-2 text-sm text-ea-deep">
               <label className="flex flex-wrap items-center gap-2">
                 <span>I am taking a break for</span>
                 <select
@@ -561,7 +573,7 @@ export default function DashboardShell({
                     setBreakReason(e.target.value);
                     setBreakFormError(null);
                   }}
-                  className="min-w-[10rem] flex-1 rounded border border-gray-300 bg-white px-2 py-2 text-gray-900"
+                  className="min-w-[10rem] flex-1 rounded-lg border border-ea-muted/60 bg-white px-2 py-2 text-ea-deep shadow-sm transition-colors focus:border-ea-primary focus:outline-none"
                 >
                   <option value="">Select Reason</option>
                   {BREAK_REASONS.map((r) => (
@@ -571,20 +583,20 @@ export default function DashboardShell({
                   ))}
                 </select>
               </label>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-ea-muted">
                 Break time is recorded as idle time for productivity reporting.
               </p>
             </div>
 
             <div className="space-y-1">
-              <label className="text-sm text-gray-700">
+              <label className="text-sm text-ea-primaryDark">
                 Please give the description:
               </label>
               <input
                 type="text"
                 value={breakDescription}
                 onChange={(e) => setBreakDescription(e.target.value)}
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                className="w-full rounded-lg border border-ea-muted/60 px-3 py-2 text-sm text-ea-deep shadow-sm transition-colors focus:border-ea-primary focus:outline-none"
                 placeholder="Optional context for your team"
               />
             </div>
@@ -597,7 +609,7 @@ export default function DashboardShell({
               <button
                 type="button"
                 onClick={() => void handleConfirmBreak()}
-                className="no-drag flex flex-col items-center justify-center gap-1 rounded-xl bg-[#b8734a] px-3 py-4 text-sm font-semibold text-white shadow hover:brightness-105"
+                className="no-drag flex flex-col items-center justify-center gap-1 rounded-xl bg-ea-primary px-3 py-4 text-sm font-semibold text-white shadow-md transition-transform hover:scale-[1.02] hover:bg-ea-primaryDark active:scale-[0.98]"
               >
                 <span className="text-xl">☕</span>
                 Take Break
@@ -605,7 +617,7 @@ export default function DashboardShell({
               <button
                 type="button"
                 onClick={() => void handleFinishDay()}
-                className="no-drag flex flex-col items-center justify-center gap-1 rounded-xl bg-red-600 px-3 py-4 text-sm font-semibold text-white shadow hover:bg-red-700"
+                className="no-drag flex flex-col items-center justify-center gap-1 rounded-xl bg-red-600 px-3 py-4 text-sm font-semibold text-white shadow-md transition-transform hover:scale-[1.02] hover:bg-red-700 active:scale-[0.98]"
               >
                 <span className="text-xl">🚶</span>
                 Finish the day
@@ -613,30 +625,33 @@ export default function DashboardShell({
             </div>
           </div>
         ) : (
+          <div key={tab} className="animate-ea-tab-in">
           <>
         {tab === 'home' && (
           <div className="flex flex-col gap-6">
-            <h1 className="text-2xl font-semibold text-gray-900">
+            <h1 className="text-xl font-semibold tracking-tight text-ea-deep">
               Welcome, {welcomeName(userEmail)}
             </h1>
-            <div className="flex justify-between gap-4">
-              <div className="space-y-3 text-sm text-gray-700">
+            <div className="flex justify-between gap-3">
+              <div className="min-w-0 space-y-3 text-sm text-ea-primaryDark">
                 <p>
-                  Worked for{' '}
-                  <span className="font-medium">{session?.workedMinutes ?? 0}</span>{' '}
-                  min
+                  Worked{' '}
+                  <span className="font-semibold tabular-nums text-ea-deep">
+                    {formatMinutesAsHoursMinutes(session?.workedMinutes ?? 0)}
+                  </span>
                 </p>
                 <p>
-                  Idle for{' '}
-                  <span className="font-medium">{session?.idleMinutes ?? 0}</span>{' '}
-                  min
+                  Idle{' '}
+                  <span className="font-semibold tabular-nums text-ea-deep">
+                    {formatMinutesAsHoursMinutes(session?.idleMinutes ?? 0)}
+                  </span>
                 </p>
-                <p className="text-gray-600">
+                <p className="text-ea-muted">
                   Started at {session?.startedAtFormatted ?? '—'}
                 </p>
                 <button
                   type="button"
-                  className="font-medium text-teal-600 hover:underline"
+                  className="font-semibold text-ea-primary transition-colors hover:text-ea-primaryDark hover:underline"
                   onClick={() =>
                     session?.onBreak
                       ? void window.api.toggleBreak()
@@ -646,27 +661,30 @@ export default function DashboardShell({
                   {session?.onBreak ? 'End break' : 'Take break'}
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  session?.onBreak ? undefined : openBreakSelection()
-                }
-                disabled={Boolean(session?.onBreak)}
-                className="no-drag flex h-24 w-24 shrink-0 flex-col items-center justify-center rounded-full bg-gradient-to-br from-[#66BB6A] to-[#43A047] px-1 shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label={
-                  session?.onBreak
-                    ? 'On break'
-                    : 'Pause — select break option'
-                }
-              >
-                {session?.onBreak ? (
-                  <span className="text-xs font-semibold text-white">On break</span>
-                ) : (
-                  <svg className="h-10 w-10 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                  </svg>
-                )}
-              </button>
+              <div className="flex shrink-0 flex-col items-center gap-2">
+                <AppLogo className="h-12 w-12 opacity-90 drop-shadow-sm" />
+                <button
+                  type="button"
+                  onClick={() =>
+                    session?.onBreak ? undefined : openBreakSelection()
+                  }
+                  disabled={Boolean(session?.onBreak)}
+                  className="no-drag flex h-24 w-24 shrink-0 flex-col items-center justify-center rounded-full bg-gradient-to-br from-ea-primary to-ea-primaryDark px-1 shadow-lg shadow-ea-deep/25 transition-transform hover:scale-[1.03] hover:brightness-105 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label={
+                    session?.onBreak
+                      ? 'On break'
+                      : 'Pause — select break option'
+                  }
+                >
+                  {session?.onBreak ? (
+                    <span className="text-xs font-semibold text-white">On break</span>
+                  ) : (
+                    <svg className="h-10 w-10 text-white" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -675,7 +693,7 @@ export default function DashboardShell({
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-xs">
               <thead>
-                <tr className="border-b border-gray-200 text-gray-600">
+                <tr className="border-b border-ea-muted/40 text-ea-muted">
                   <th className="pb-2 pr-2 font-medium">Start time</th>
                   <th className="pb-2 pr-2 font-medium">End time</th>
                   <th className="pb-2 pr-2 font-medium">Activity Status</th>
@@ -684,15 +702,15 @@ export default function DashboardShell({
               </thead>
               <tbody>
                 {(session?.segments ?? []).map((seg) => (
-                  <tr key={seg.id} className={`border-b border-gray-100 ${segmentRowClass(seg.activity)}`}>
+                  <tr key={seg.id} className={`border-b border-ea-soft/80 ${segmentRowClass(seg.activity)}`}>
                     <td className="py-2 pr-2">{formatClock(seg.start)}</td>
                     <td className="py-2 pr-2">
                       {seg.end ? formatClock(seg.end) : ''}
                     </td>
                     <td className="py-2 pr-2 align-top">
-                      <div className="font-medium">{seg.activity}</div>
+                      <div className="font-medium text-ea-deep">{seg.activity}</div>
                       {seg.note ? (
-                        <div className="mt-0.5 max-w-[140px] text-[10px] leading-snug text-gray-500">
+                        <div className="mt-0.5 max-w-[140px] text-[10px] leading-snug text-ea-muted">
                           {seg.note}
                         </div>
                       ) : null}
@@ -707,12 +725,12 @@ export default function DashboardShell({
 
         {tab === 'activity' && (
           <div className="space-y-3 pb-1">
-            <h2 className="text-sm font-semibold text-gray-900">Team activity</h2>
-            <p className="text-[10px] leading-snug text-gray-500">
+            <h2 className="text-sm font-semibold text-ea-deep">Team activity</h2>
+            <p className="text-[10px] leading-snug text-ea-muted">
               Status reflects synced desktop activity (updates every ~25s). Admins assign teams in the web admin Reporting tab.
             </p>
             {presenceLoading && presenceMembers.length === 0 ? (
-              <p className="text-xs text-gray-500">Loading…</p>
+              <p className="text-xs text-ea-muted">Loading…</p>
             ) : null}
             {presenceError ? (
               <p className="text-xs text-red-600">{presenceError}</p>
@@ -722,25 +740,25 @@ export default function DashboardShell({
               return (
                 <div
                   key={label}
-                  className="rounded-lg border border-gray-100 bg-gray-50/90 px-2.5 py-2"
+                  className="rounded-lg border border-ea-soft bg-ea-soft/40 px-2.5 py-2"
                 >
-                  <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-600">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wide text-ea-muted">
                     {label}
                   </h3>
                   {list.length === 0 ? (
-                    <p className="mt-1 text-[10px] text-gray-400">No members</p>
+                    <p className="mt-1 text-[10px] text-ea-muted/80">No members</p>
                   ) : (
                     <ul className="mt-1.5 space-y-2">
                       {list.map((m) => (
                         <li
                           key={m.user_id}
-                          className="flex items-start justify-between gap-2 border-b border-gray-100/80 pb-2 last:border-0 last:pb-0"
+                          className="flex items-start justify-between gap-2 border-b border-ea-soft/80 pb-2 last:border-0 last:pb-0"
                         >
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-xs font-medium text-gray-900">
+                            <span className="block truncate text-xs font-medium text-ea-deep">
                               {displayShortName(m.email)}
                             </span>
-                            <span className="block truncate text-[10px] text-gray-500">
+                            <span className="block truncate text-[10px] text-ea-muted">
                               {m.email}
                             </span>
                           </span>
@@ -760,8 +778,8 @@ export default function DashboardShell({
         )}
 
         {tab === 'hours' && (
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-6 text-center text-sm text-gray-600">
-            <p className="font-medium text-gray-800">Hours summary</p>
+          <div className="rounded-lg border border-ea-soft bg-ea-soft/50 p-6 text-center text-sm text-ea-primaryDark">
+            <p className="font-medium text-ea-deep">Hours summary</p>
             <p className="mt-2">
               Weekly totals and exports will appear here. Tracking continues in the
               background.
@@ -771,18 +789,18 @@ export default function DashboardShell({
 
         {tab === 'mail' && (
           <div className="space-y-4 text-sm">
-            <p className="font-medium text-gray-900">Mail your manager</p>
+            <p className="font-medium text-ea-deep">Mail your manager</p>
             {mailLoadingCtx ? (
-              <p className="text-gray-500">Loading…</p>
+              <p className="text-ea-muted">Loading…</p>
             ) : mailManagers.length === 0 ? (
               <p className="text-xs text-amber-800">{mailMsg ?? 'No managers configured.'}</p>
             ) : (
               <>
-                <label className="block text-xs font-medium text-gray-700">
+                <label className="block text-xs font-medium text-ea-primaryDark">
                   Recipient manager
                 </label>
                 <select
-                  className="w-full rounded border border-gray-300 bg-white px-2 py-2 text-xs text-gray-900"
+                  className="w-full rounded-lg border border-ea-muted/60 bg-white px-2 py-2 text-xs text-ea-deep shadow-sm focus:border-ea-primary focus:outline-none"
                   value={mailRecipientEmail}
                   onChange={(e) => {
                     setMailRecipientEmail(e.target.value);
@@ -797,7 +815,7 @@ export default function DashboardShell({
                   ))}
                 </select>
                 {mailAssignedEmail ? (
-                  <p className="text-[10px] text-gray-500">
+                  <p className="text-[10px] text-ea-muted">
                     Assigned: {mailAssignedEmail}
                   </p>
                 ) : null}
@@ -808,7 +826,7 @@ export default function DashboardShell({
                 <button
                   key={p.id}
                   type="button"
-                  className="rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-teal-50"
+                  className="rounded-full border border-ea-soft bg-ea-soft/50 px-2 py-1 text-[11px] font-medium text-ea-primaryDark transition-transform hover:scale-105 hover:bg-ea-soft"
                   onClick={() => applyMailPreset(p.id)}
                 >
                   {p.label}
@@ -816,14 +834,14 @@ export default function DashboardShell({
               ))}
             </div>
             <input
-              className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs text-gray-900"
+              className="w-full rounded-lg border border-ea-muted/60 px-2 py-1.5 text-xs text-ea-deep shadow-sm focus:border-ea-primary focus:outline-none"
               placeholder="Subject"
               value={mailSubject}
               onChange={(e) => setMailSubject(e.target.value)}
               disabled={!mailManagers.length}
             />
             <textarea
-              className="min-h-[120px] w-full resize-y rounded border border-gray-300 px-2 py-1.5 font-mono text-[11px] text-gray-900"
+              className="min-h-[120px] w-full resize-y rounded-lg border border-ea-muted/60 px-2 py-1.5 font-mono text-[11px] text-ea-deep shadow-sm focus:border-ea-primary focus:outline-none"
               placeholder="Message"
               value={mailBody}
               onChange={(e) => setMailBody(e.target.value)}
@@ -846,7 +864,7 @@ export default function DashboardShell({
                 !mailBody.trim()
               }
               onClick={() => void handleMailSend()}
-              className="w-full rounded-lg bg-teal-600 py-2 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-40"
+              className="w-full rounded-lg bg-ea-primary py-2 text-xs font-semibold text-white shadow-md transition-transform hover:scale-[1.01] hover:bg-ea-primaryDark disabled:opacity-40"
             >
               {mailSending ? 'Sending…' : 'Send to manager'}
             </button>
@@ -855,13 +873,13 @@ export default function DashboardShell({
 
         {tab === 'more' && (
           <div className="space-y-5 text-sm">
-            <div className="flex gap-3 border-b border-gray-100 pb-4">
-              <span className="text-2xl text-teal-600">⟳</span>
+            <div className="flex gap-3 border-b border-ea-soft pb-4">
+              <span className="text-2xl text-ea-primary">⟳</span>
               <div>
-                <p className="text-gray-800">{syncLabel}</p>
+                <p className="text-ea-deep">{syncLabel}</p>
                 <button
                   type="button"
-                  className="mt-1 font-medium text-blue-600 hover:underline"
+                  className="mt-1 font-medium text-ea-primary transition-colors hover:text-ea-primaryDark hover:underline"
                   onClick={handleSyncNow}
                   disabled={syncing}
                 >
@@ -872,7 +890,7 @@ export default function DashboardShell({
 
             <button
               type="button"
-              className="flex w-full items-center gap-3 border-b border-gray-100 pb-4 text-left text-gray-800 hover:bg-gray-50"
+              className="flex w-full items-center gap-3 rounded-lg border-b border-ea-soft pb-4 text-left text-ea-deep transition-colors hover:bg-ea-soft/50"
               onClick={onLogout}
             >
               <span className="text-xl">⎋</span>
@@ -881,7 +899,7 @@ export default function DashboardShell({
             {!agentLockedDown && (
               <button
                 type="button"
-                className="flex w-full items-center gap-3 border-b border-gray-100 pb-4 text-left text-gray-800 hover:bg-gray-50"
+                className="flex w-full items-center gap-3 rounded-lg border-b border-ea-soft pb-4 text-left text-ea-deep transition-colors hover:bg-ea-soft/50"
                 onClick={() => window.close()}
               >
                 <span className="text-xl">🚪</span>
@@ -889,8 +907,8 @@ export default function DashboardShell({
               </button>
             )}
 
-            <div className="flex items-center justify-between gap-3 border-b border-gray-100 pb-4">
-              <span className="text-gray-700">
+            <div className="flex items-center justify-between gap-3 border-b border-ea-soft pb-4">
+              <span className="text-ea-primaryDark">
                 I would like to start my tracking automatically
               </span>
               <button
@@ -899,25 +917,25 @@ export default function DashboardShell({
                 aria-checked={autoTracking}
                 onClick={() => void handleToggleAuto(!autoTracking)}
                 className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
-                  autoTracking ? 'bg-teal-500' : 'bg-gray-300'
+                  autoTracking ? 'bg-ea-primary' : 'bg-ea-muted/40'
                 }`}
               >
                 <span
-                  className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
+                  className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform duration-200 ease-out ${
                     autoTracking ? 'left-6' : 'left-0.5'
                   }`}
                 />
               </button>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 pb-4">
-              <span className="text-gray-700">Remind me to resume break after</span>
+            <div className="flex flex-wrap items-center gap-2 border-b border-ea-soft pb-4">
+              <span className="text-ea-primaryDark">Remind me to resume break after</span>
               <select
                 value={breakReminder}
                 onChange={(e) =>
                   void handleBreakReminder(Number(e.target.value))
                 }
-                className="rounded border border-gray-300 bg-white px-2 py-1 text-gray-900"
+                className="rounded-lg border border-ea-muted/60 bg-white px-2 py-1 text-ea-deep shadow-sm focus:border-ea-primary focus:outline-none"
               >
                 {[5, 10, 15, 30, 45, 60].map((m) => (
                   <option key={m} value={m}>
@@ -927,19 +945,20 @@ export default function DashboardShell({
               </select>
             </div>
 
-            <p className="text-[11px] leading-relaxed text-gray-400">
+            <p className="text-[11px] leading-relaxed text-ea-muted">
               Version — {appVersion || '—'} · Last Active Before —{' '}
-              {session?.idleMinutes ?? 0} min idle · Server Time —{' '}
+              {formatMinutesAsHoursMinutes(session?.idleMinutes ?? 0)} idle · Server Time —{' '}
               {new Date().toLocaleString()} · Timeout — 5 min
             </p>
           </div>
         )}
           </>
+          </div>
         )}
       </div>
 
-      <nav className="no-drag shrink-0 border-t border-gray-200 bg-white px-1 pb-1 pt-2">
-        <div className="grid grid-cols-3 gap-y-1 gap-x-0.5 text-center text-[10px] font-medium leading-tight">
+      <nav className="no-drag shrink-0 border-t border-ea-soft bg-gradient-to-t from-ea-soft/30 to-white px-1 pb-1 pt-2">
+        <div className="grid grid-cols-3 gap-y-1 gap-x-0.5 text-center text-[10px] font-semibold leading-tight">
           {(
             [
               ['home', 'Home'],
@@ -957,32 +976,32 @@ export default function DashboardShell({
                 setBreakFlow(false);
                 setTab(id);
               }}
-              className={`rounded py-2 transition ${
+              className={`rounded-lg py-2 transition-all duration-200 ease-out ${
                 tab === id
-                  ? 'bg-teal-500 text-white'
+                  ? 'bg-ea-primary text-white shadow-md shadow-ea-deep/20 scale-[1.02]'
                   : id === 'more'
-                    ? 'text-red-500 hover:bg-gray-50'
-                    : 'text-teal-600 hover:bg-gray-50'
+                    ? 'text-red-600 hover:bg-red-50'
+                    : 'text-ea-primaryDark hover:bg-ea-soft/70 active:scale-[0.98]'
               }`}
             >
               {label}
             </button>
           ))}
         </div>
-        <div className="mt-2 flex justify-center gap-2 border-t border-gray-100 pt-2 text-xs">
+        <div className="mt-2 flex justify-center gap-2 border-t border-ea-soft/80 pt-2 text-xs">
           <button
             type="button"
-            className="text-teal-600 hover:underline"
+            className="font-medium text-ea-primary transition-colors hover:text-ea-primaryDark hover:underline"
             onClick={() =>
               void window.api.openDashboard(`${origin}/dashboard`)
             }
           >
             My Dashboard
           </button>
-          <span className="text-gray-300">|</span>
+          <span className="text-ea-muted">|</span>
           <button
             type="button"
-            className="text-teal-600 hover:underline"
+            className="font-medium text-ea-primary transition-colors hover:text-ea-primaryDark hover:underline"
             onClick={() =>
               void window.api.openDashboard(`${origin}/dashboard`)
             }
@@ -994,22 +1013,22 @@ export default function DashboardShell({
 
       {idleWarn && !idleResolutionOpen && (
         <div
-          className="no-drag fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/55 px-4 py-8 backdrop-blur-[1px]"
+          className="no-drag fixed inset-0 z-[200] flex flex-col items-center justify-center bg-ea-deep/75 px-4 py-8 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="idle-warn-title"
         >
-          <div className="w-full max-w-sm rounded-xl border border-amber-200 bg-amber-50 px-5 py-5 shadow-xl">
+          <div className="w-full max-w-sm rounded-xl border border-ea-muted/60 bg-white px-5 py-5 shadow-2xl shadow-ea-deep/40 transition-opacity duration-200">
             <h2
               id="idle-warn-title"
-              className="text-center text-lg font-semibold text-amber-950"
+              className="text-center text-lg font-semibold text-ea-deep"
             >
               No input detected
             </h2>
-            <p className="mt-2 text-center text-sm text-amber-900/90">
+            <p className="mt-2 text-center text-sm text-ea-primaryDark">
               Confirm what you were doing before this session is marked idle.
               Resolution in{' '}
-              <span className="font-mono font-semibold tabular-nums">
+              <span className="font-mono font-semibold tabular-nums text-ea-primary">
                 {formatHMS(idleWarnSecondsLeft)}
               </span>
               .
@@ -1020,19 +1039,22 @@ export default function DashboardShell({
 
       {idleResolutionOpen && (
         <div
-          className="no-drag fixed inset-0 z-[210] flex flex-col items-center justify-center bg-black/60 px-3 py-8 backdrop-blur-[1px]"
+          className="no-drag fixed inset-0 z-[210] flex flex-col items-center justify-center bg-ea-deep/80 px-3 py-8 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="idle-res-title"
         >
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-teal-200 bg-white px-4 py-5 shadow-xl">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-ea-muted/50 bg-white px-4 py-5 shadow-2xl shadow-ea-deep/30">
+            <div className="mb-3 flex justify-center">
+              <AppLogo className="h-11 w-11" />
+            </div>
             <h2
               id="idle-res-title"
-              className="text-center text-lg font-semibold text-teal-800"
+              className="text-center text-lg font-semibold text-ea-deep"
             >
               How should we record this time?
             </h2>
-            <p className="mt-1 text-center text-xs text-gray-600">
+            <p className="mt-1 text-center text-xs text-ea-muted">
               You had no input for about five minutes. Choose whether this was
               work or a break.
             </p>
@@ -1041,9 +1063,9 @@ export default function DashboardShell({
               <p className="mt-3 text-center text-sm text-red-600">{idleUiError}</p>
             )}
 
-            <div className="mt-4 space-y-4 border-t border-gray-100 pt-4">
-              <p className="text-sm font-medium text-gray-800">Working</p>
-              <label className="block text-xs text-gray-600">
+            <div className="mt-4 space-y-4 border-t border-ea-soft pt-4">
+              <p className="text-sm font-medium text-ea-deep">Working</p>
+              <label className="block text-xs text-ea-primaryDark">
                 What were you doing? (required)
                 <textarea
                   value={idleWorkNote}
@@ -1052,7 +1074,7 @@ export default function DashboardShell({
                     setIdleUiError(null);
                   }}
                   rows={3}
-                  className="mt-1 w-full resize-none rounded border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                  className="mt-1 w-full resize-none rounded-lg border border-ea-muted/60 px-3 py-2 text-sm text-ea-deep shadow-sm transition-colors focus:border-ea-primary focus:outline-none"
                   placeholder="e.g. Team meeting, deep focus without keyboard…"
                   disabled={idleSubmitting}
                 />
@@ -1061,15 +1083,15 @@ export default function DashboardShell({
                 type="button"
                 disabled={idleSubmitting}
                 onClick={() => void handleIdleConfirmWork()}
-                className="w-full rounded-lg bg-[#43A047] py-2.5 text-sm font-semibold text-white shadow hover:brightness-105 disabled:opacity-50"
+                className="w-full rounded-lg bg-ea-primary py-2.5 text-sm font-semibold text-white shadow-md transition-transform hover:scale-[1.01] hover:bg-ea-primaryDark disabled:opacity-50"
               >
                 Count as working time
               </button>
             </div>
 
-            <div className="mt-6 space-y-3 border-t border-gray-100 pt-4">
-              <p className="text-sm font-medium text-gray-800">Break</p>
-              <label className="block text-xs text-gray-600">
+            <div className="mt-6 space-y-3 border-t border-ea-soft pt-4">
+              <p className="text-sm font-medium text-ea-deep">Break</p>
+              <label className="block text-xs text-ea-primaryDark">
                 Reason
                 <select
                   value={idleBreakReason}
@@ -1077,7 +1099,7 @@ export default function DashboardShell({
                     setIdleBreakReason(e.target.value);
                     setIdleUiError(null);
                   }}
-                  className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900"
+                  className="mt-1 w-full rounded-lg border border-ea-muted/60 bg-white px-2 py-2 text-sm text-ea-deep shadow-sm focus:border-ea-primary focus:outline-none"
                   disabled={idleSubmitting}
                 >
                   <option value="">Select reason</option>
@@ -1088,13 +1110,13 @@ export default function DashboardShell({
                   ))}
                 </select>
               </label>
-              <label className="block text-xs text-gray-600">
+              <label className="block text-xs text-ea-primaryDark">
                 Note (optional)
                 <input
                   type="text"
                   value={idleBreakNote}
                   onChange={(e) => setIdleBreakNote(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                  className="mt-1 w-full rounded-lg border border-ea-muted/60 px-3 py-2 text-sm text-ea-deep shadow-sm focus:border-ea-primary focus:outline-none"
                   disabled={idleSubmitting}
                 />
               </label>
@@ -1102,7 +1124,7 @@ export default function DashboardShell({
                 type="button"
                 disabled={idleSubmitting}
                 onClick={() => void handleIdleConfirmBreak()}
-                className="w-full rounded-lg bg-[#b8734a] py-2.5 text-sm font-semibold text-white shadow hover:brightness-105 disabled:opacity-50"
+                className="w-full rounded-lg bg-ea-primaryDark py-2.5 text-sm font-semibold text-white shadow-md transition-transform hover:scale-[1.01] hover:bg-ea-deep disabled:opacity-50"
               >
                 Record as break
               </button>

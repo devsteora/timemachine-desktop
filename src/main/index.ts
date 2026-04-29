@@ -221,8 +221,8 @@ function createWindow(): void {
   const windowIcon = resolveWindowIcon();
 
   mainWindow = new BrowserWindow({
-    width: 380,
-    height: 680,
+    width: 440,
+    height: 440,
     show: false,
     autoHideMenuBar: true,
     alwaysOnTop: true,

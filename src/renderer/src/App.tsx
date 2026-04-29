@@ -4,6 +4,7 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import DashboardShell, {
   type SessionSnapshotDTO,
 } from './DashboardShell';
+import { AppLogo } from './AppLogo';
 
 declare global {
   interface Window {
@@ -167,23 +168,26 @@ export default function App() {
 
   if (!authReady) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-900 text-slate-400">
-        <span className="text-sm">Loading…</span>
+      <div className="flex h-screen items-center justify-center bg-ea-deep font-sans text-ea-soft">
+        <span className="text-sm font-medium tracking-wide">Loading…</span>
       </div>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <div className="flex h-screen flex-col bg-slate-900 font-sans">
-        <div className="draggable flex items-center justify-between border-b border-slate-700 bg-slate-800 p-3 rounded-t-lg">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            Enterprise Agent
-          </span>
-          <div className="no-drag flex items-center gap-1">
+      <div className="flex h-screen flex-col bg-gradient-to-b from-ea-deep via-ea-primaryDark to-ea-deep font-sans text-ea-soft">
+        <div className="draggable flex items-center justify-between gap-2 border-b border-ea-muted/30 bg-ea-deep/90 px-3 py-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <AppLogo className="no-drag h-8 w-8 shrink-0" />
+            <span className="truncate text-xs font-bold uppercase tracking-wider text-ea-soft">
+              Enterprise Agent
+            </span>
+          </div>
+          <div className="no-drag flex shrink-0 items-center gap-1">
             <button
               type="button"
-              className="no-drag flex h-8 w-9 items-center justify-center rounded text-slate-400 hover:bg-slate-700 hover:text-white"
+              className="no-drag flex h-8 w-9 items-center justify-center rounded-lg text-ea-soft transition-colors hover:bg-white/10 hover:text-white"
               style={{ WebkitAppRegion: 'no-drag' } as CSSProperties}
               onMouseDown={(e) => e.stopPropagation()}
               onClick={() => void window.api.minimizeWindow()}
@@ -196,7 +200,7 @@ export default function App() {
             {!agentLockedDown && (
               <button
                 type="button"
-                className="flex h-8 w-9 items-center justify-center rounded text-slate-500 hover:bg-slate-700 hover:text-white"
+                className="flex h-8 w-9 items-center justify-center rounded-lg text-ea-muted transition-colors hover:bg-white/10 hover:text-white"
                 onClick={() => window.close()}
                 aria-label="Close"
               >
@@ -209,12 +213,12 @@ export default function App() {
           onSubmit={handleLogin}
           className="no-drag flex flex-grow flex-col gap-4 p-5"
         >
-          <p className="text-sm text-slate-400">
+          <p className="text-sm leading-relaxed text-ea-soft/90">
             Sign in with the same account as the web dashboard. Activity syncs
             to your organization&apos;s API.
           </p>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">
+            <label className="mb-1 block text-xs font-medium text-ea-muted">
               API base URL
             </label>
             <input
@@ -222,12 +226,12 @@ export default function App() {
               required
               value={apiBaseUrl}
               onChange={(e) => setApiBaseUrl(e.target.value)}
-              className="w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
+              className="w-full rounded-lg border border-ea-muted/50 bg-ea-deep/50 px-3 py-2 text-sm text-white outline-none ring-ea-primary/30 transition-shadow duration-200 placeholder:text-ea-muted/80 focus:border-ea-primary focus:ring-2"
               placeholder="http://127.0.0.1:8000"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">
+            <label className="mb-1 block text-xs font-medium text-ea-muted">
               Email
             </label>
             <input
@@ -235,12 +239,12 @@ export default function App() {
               required
               value={loginEmail}
               onChange={(e) => setLoginEmail(e.target.value)}
-              className="w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
+              className="w-full rounded-lg border border-ea-muted/50 bg-ea-deep/50 px-3 py-2 text-sm text-white outline-none transition-shadow duration-200 placeholder:text-ea-muted/80 focus:border-ea-primary focus:ring-2 focus:ring-ea-primary/40"
               autoComplete="username"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">
+            <label className="mb-1 block text-xs font-medium text-ea-muted">
               Password
             </label>
             <input
@@ -248,17 +252,17 @@ export default function App() {
               required
               value={loginPassword}
               onChange={(e) => setLoginPassword(e.target.value)}
-              className="w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
+              className="w-full rounded-lg border border-ea-muted/50 bg-ea-deep/50 px-3 py-2 text-sm text-white outline-none transition-shadow duration-200 placeholder:text-ea-muted/80 focus:border-ea-primary focus:ring-2 focus:ring-ea-primary/40"
               autoComplete="current-password"
             />
           </div>
           {loginError && (
-            <p className="text-xs text-red-400">{loginError}</p>
+            <p className="text-xs text-red-300">{loginError}</p>
           )}
           <button
             type="submit"
             disabled={loginSubmitting}
-            className="mt-2 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60"
+            className="mt-2 rounded-lg bg-ea-primary py-2.5 text-sm font-semibold text-white shadow-lg shadow-ea-deep/40 transition-transform duration-200 hover:scale-[1.02] hover:bg-ea-primaryDark active:scale-[0.98] disabled:opacity-60"
           >
             {loginSubmitting ? 'Signing in…' : 'Sign in'}
           </button>
