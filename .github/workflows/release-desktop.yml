@@ -1,6 +1,8 @@
 name: Release Desktop Agent
 
-# Triggered by a version tag push: git tag v1.2.3 && git push --tags
+# Standalone desktop repo: package.json lives at the repository root (no desktop/ subfolder).
+# For monorepo layouts (frontend/backend/desktop), use ../.github/workflows/release-desktop.yml instead.
+
 on:
   push:
     tags:
@@ -25,41 +27,28 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        working-directory: desktop
         run: npm ci
 
       - name: Build and package (Windows NSIS installer)
-        working-directory: desktop
         env:
-          # Code-signing certificate (optional but recommended for enterprise):
-          # CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-          # CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-
-          # electron-builder reads publish config from electron-builder.yml.
-          # AWS credentials are injected below for the S3 upload.
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ env.AWS_REGION }}
-          # Bake the production API URL into the packaged app at build time.
           ENTERPRISE_API_URL: ${{ secrets.ENTERPRISE_API_URL }}
         run: npm run build:win -- --publish always
 
-      # The installer and latest.yml are uploaded to S3 by electron-builder
-      # (publish always). The step below also uploads them explicitly so CI
-      # artifacts are visible in the GitHub Actions summary.
       - name: Upload installer artifact to GitHub Actions
         uses: actions/upload-artifact@v4
         with:
           name: EnterpriseAgentSetup-${{ github.ref_name }}
           path: |
-            desktop/dist/EnterpriseAgentSetup-*.exe
-            desktop/dist/latest.yml
+            dist/EnterpriseAgentSetup-*.exe
+            dist/latest.yml
 
-  # macOS build (optional — only needed if you distribute to macOS employees)
   build-macos:
     name: Build macOS DMG
     runs-on: macos-latest
-    if: false   # Set to true when macOS distribution is required
+    if: false
 
     steps:
       - uses: actions/checkout@v4
@@ -67,9 +56,7 @@ jobs:
         with:
           node-version: '20'
       - run: npm ci
-        working-directory: desktop
       - run: npm run build:mac -- --publish always
-        working-directory: desktop
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
