@@ -13,6 +13,7 @@ asarUnpack:
   - resources/**
 win:
   executableName: EnterpriseAgent
+  icon: icon.png
   # Sign the installer with your code-signing certificate.
   # Set CSC_LINK and CSC_KEY_PASSWORD env vars in CI for signing.
   signingHashAlgorithms:
@@ -21,8 +22,8 @@ nsis:
   artifactName: EnterpriseAgentSetup-${version}.exe
   shortcutName: Enterprise Agent
   uninstallDisplayName: Enterprise Agent
-  createDesktopShortcut: false
-  createStartMenuShortcut: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
   # Run the app immediately after install so the agent is active right away
   runAfterFinish: true
   # Custom NSIS script: writes the HKLM Run key for machine-wide startup enforcement
@@ -46,6 +47,8 @@ linux:
 appImage:
   artifactName: EnterpriseAgent-${version}.${ext}
 npmRebuild: false
+# Each release must upload latest.yml, the NSIS .exe, and blockmap to this S3 path
+# (build:win) so electron-updater can find a newer version.
 publish:
   provider: s3
   bucket: lms-app-storage-steora

@@ -1,3 +1,4 @@
+import { existsSync } from 'fs';
 import { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, powerMonitor, Notification, autoUpdater as electronAutoUpdater, shell } from 'electron';
 import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
@@ -130,15 +131,17 @@ function productionAgentLockdown(): boolean {
 }
 
 function registerRunAtStartup(): void {
+  // Packaged Windows installs register machine-wide startup via HKLM Run (installer.nsh).
+  // Avoid a second HKCU login item that launches a duplicate instance (single-instance lock).
+  if (process.platform === 'win32' && app.isPackaged && productionAgentLockdown()) {
+    return;
+  }
   try {
     app.setLoginItemSettings({
       openAtLogin: true,
       openAsHidden: true,
       enabled: true,
       path: process.execPath,
-      // --hidden tells the app to start without showing the window (tray only).
-      // On Windows the HKLM Run key written by installer.nsh also passes --hidden,
-      // so this HKCU entry acts as a fallback for non-admin accounts.
       args: process.platform === 'win32' ? ['--hidden'] : undefined,
     });
   } catch (e) {
@@ -146,13 +149,45 @@ function registerRunAtStartup(): void {
   }
 }
 
-/** Minimal valid PNG so Windows tray does not reject an empty image. */
+/** Paths to tray PNG (asar-unpacked `resources/` in production builds). */
+function trayIconPathCandidates(): string[] {
+  if (app.isPackaged) {
+    return [
+      join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'tray-icon.png'),
+      join(process.resourcesPath, 'resources', 'tray-icon.png'),
+    ];
+  }
+  return [join(__dirname, '../../resources/tray-icon.png')];
+}
+
+/** Visible tray/taskbar icon; falls back to a 1px PNG only if assets are missing. */
 function trayIconImage(): Electron.NativeImage {
+  for (const p of trayIconPathCandidates()) {
+    try {
+      if (existsSync(p)) {
+        const img = nativeImage.createFromPath(p);
+        if (!img.isEmpty()) return img;
+      }
+    } catch {
+      /* try next */
+    }
+  }
   const onePxPng = Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
     'base64'
   );
   return nativeImage.createFromBuffer(onePxPng);
+}
+
+function resolveWindowIcon(): string | undefined {
+  const paths =
+    app.isPackaged
+      ? trayIconPathCandidates()
+      : [join(__dirname, '../../build/icon.png'), ...trayIconPathCandidates()];
+  for (const p of paths) {
+    if (existsSync(p)) return p;
+  }
+  return undefined;
 }
 
 function createTray(): void {
@@ -183,6 +218,8 @@ function createTray(): void {
 function createWindow(): void {
   const lock = productionAgentLockdown();
 
+  const windowIcon = resolveWindowIcon();
+
   mainWindow = new BrowserWindow({
     width: 380,
     height: 680,
@@ -194,6 +231,7 @@ function createWindow(): void {
     minimizable: true,
     maximizable: false,
     skipTaskbar: false,
+    ...(windowIcon ? { icon: windowIcon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -287,6 +325,10 @@ if (!gotSingleInstanceLock) {
 
     // Silent auto-update: download without prompting; install after handles are released.
     // Immediate quitAndInstall races NSIS and often causes "Failed to uninstall old application files".
+    autoUpdater.logger = console;
+    autoUpdater.on('error', (err) => {
+      console.error('[autoUpdater] error:', err);
+    });
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.on('update-downloaded', () => {
@@ -296,8 +338,8 @@ if (!gotSingleInstanceLock) {
         autoUpdater.quitAndInstall(true, true);
       }, 15000);
     });
-    autoUpdater.checkForUpdates().catch(() => {
-      // Silently ignore update check failures (offline, no update server yet).
+    autoUpdater.checkForUpdates().catch((err: unknown) => {
+      console.error('[autoUpdater] checkForUpdates failed:', err);
     });
 
     initDB();

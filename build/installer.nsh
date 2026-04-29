@@ -18,6 +18,8 @@
   ; Write to HKLM so the agent auto-starts for ALL users on this machine,
   ; not just the account that ran the installer.
   ; --hidden suppresses the UI on startup; the agent runs silently in the tray.
+  ; The packaged app skips adding an HKCU login item on Windows (see registerRunAtStartup in main)
+  ; so this HKLM key is the single autostart mechanism for packaged installs.
   WriteRegStr HKLM \
     "SOFTWARE\Microsoft\Windows\CurrentVersion\Run" \
     "EnterpriseAgent" \
